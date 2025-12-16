@@ -227,71 +227,72 @@ function HomeScreen() {
   const [priceChange, setPriceChange] = useState(null);
   const [tokenBalances, setTokenBalances] = useState([]);
   const [activeTab, setActiveTab] = useState("tokens");
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   const currentChain = CHAINS.find((c) => c.chainId === currentChainId) || CHAINS[0];
   const chainTokens = tokens.filter((t) => t.chainId === currentChainId);
   const chainNFTs = nfts.filter((n) => n.chainId === currentChainId);
 
-  const loadBalance = useCallback(async () => {
-    if (!wallet) return;
-    setLoading(true);
-    try {
-      const bal = await WalletService.getBalance(wallet.address, currentChain.rpcUrl);
-      setBalance(bal);
-    } catch (error) {
-      console.error("Error loading balance:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [wallet, currentChain.rpcUrl]);
-
-  const loadPrice = useCallback(async () => {
-    try {
-      const priceData = await PriceService.getPrice(currentChain.chainId, currentChain.symbol);
-      if (priceData) {
-        setNativePrice(priceData.price);
-        setPriceChange(priceData.change);
-      } else {
-        setNativePrice(null);
-        setPriceChange(null);
-      }
-    } catch (error) {
-      console.error("Error loading price:", error);
-    }
-  }, [currentChain.chainId, currentChain.symbol]);
-
-  const loadTokenBalances = useCallback(async () => {
-    if (!wallet || chainTokens.length === 0) {
-      setTokenBalances([]);
-      return;
-    }
-    const balances = await Promise.all(
-      chainTokens.map(async (token) => {
-        try {
-          const bal = await WalletService.getTokenBalance(token.address, wallet.address, currentChain.rpcUrl);
-          let priceData = null;
-          if (currentChain.chainId === 639054) {
-            priceData = await PriceService.getBlokirstaTokenPrice(token.symbol);
-          } else {
-            priceData = await PriceService.getTokenPriceByContract(currentChain.chainId, token.address);
-          }
-          const price = priceData?.price || null;
-          return { ...token, balance: bal, price, usdValue: price ? parseFloat(bal) * price : 0 };
-        } catch (error) {
-          return { ...token, balance: "0", price: null, usdValue: 0 };
-        }
-      })
-    );
-    setTokenBalances(balances);
-  }, [wallet, chainTokens, currentChain]);
-
+  // Load data only once when component mounts or chain changes
   useEffect(() => {
-    if (wallet) {
-      loadBalance();
-      loadPrice();
-      loadTokenBalances();
-    }
-  }, [wallet, currentChainId, loadBalance, loadPrice, loadTokenBalances]);
+    let isMounted = true;
+    
+    const loadAllData = async () => {
+      if (!wallet) return;
+      
+      setLoading(true);
+      
+      try {
+        // Load balance
+        const bal = await WalletService.getBalance(wallet.address, currentChain.rpcUrl);
+        if (isMounted) setBalance(bal);
+        
+        // Load price
+        const priceData = await PriceService.getPrice(currentChain.chainId, currentChain.symbol);
+        if (isMounted && priceData) {
+          setNativePrice(priceData.price);
+          setPriceChange(priceData.change);
+        }
+        
+        // Load token balances
+        const currentTokens = tokens.filter((t) => t.chainId === currentChainId);
+        if (currentTokens.length > 0) {
+          const balances = await Promise.all(
+            currentTokens.map(async (token) => {
+              try {
+                const tokenBal = await WalletService.getTokenBalance(token.address, wallet.address, currentChain.rpcUrl);
+                let tokenPriceData = null;
+                if (currentChain.chainId === 639054) {
+                  tokenPriceData = await PriceService.getBlokirstaTokenPrice(token.symbol);
+                } else {
+                  tokenPriceData = await PriceService.getTokenPriceByContract(currentChain.chainId, token.address);
+                }
+                const price = tokenPriceData?.price || null;
+                return { ...token, balance: tokenBal, price, usdValue: price ? parseFloat(tokenBal) * price : 0 };
+              } catch (error) {
+                return { ...token, balance: "0", price: null, usdValue: 0 };
+              }
+            })
+          );
+          if (isMounted) setTokenBalances(balances);
+        } else {
+          if (isMounted) setTokenBalances([]);
+        }
+        
+        if (isMounted) setDataLoaded(true);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    
+    loadAllData();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [wallet?.address, currentChainId, tokens.length]); // Only depend on stable values
 
   const copyAddress = () => {
     if (wallet?.address) {
