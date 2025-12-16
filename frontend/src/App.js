@@ -1208,13 +1208,15 @@ function QRScannerScreen({ onScan, onClose }) {
   );
 }
 
-// Settings Screen
+// Settings Screen with Multi-Wallet Support
 function SettingsScreen() {
   const navigate = useNavigate();
-  const { getCurrentWallet, clearWallet, removeWallet, wallets } = useWalletStore();
+  const { getCurrentWallet, clearWallet, removeWallet, wallets, setCurrentWallet, currentWalletId } = useWalletStore();
   const wallet = getCurrentWallet();
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [showMnemonic, setShowMnemonic] = useState(false);
+  const [showWalletSelector, setShowWalletSelector] = useState(false);
+  const { showToast } = useToast();
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout? Make sure you have saved your recovery phrase.")) {
@@ -1226,8 +1228,37 @@ function SettingsScreen() {
   const handleRemoveWallet = () => {
     if (window.confirm("Are you sure you want to remove this wallet?")) {
       removeWallet(wallet.id);
+      showToast("Wallet removed", "success");
       if (wallets.length <= 1) {
         navigate("/");
+      }
+    }
+  };
+
+  const handleSwitchWallet = (walletId) => {
+    setCurrentWallet(walletId);
+    setShowWalletSelector(false);
+    showToast("Wallet switched", "success");
+  };
+
+  const copyToClipboard = async (text, label) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(`${label} copied!`, "success");
+    } catch (err) {
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        showToast(`${label} copied!`, "success");
+      } catch (fallbackErr) {
+        window.prompt(`Copy this ${label.toLowerCase()}:`, text);
       }
     }
   };
@@ -1243,38 +1274,131 @@ function SettingsScreen() {
       </div>
 
       <div className="content px-6 py-4 overflow-auto pb-24">
+        {/* Multi-Wallet Section */}
         <div className="mb-6">
-          <h3 className="text-gray-400 text-sm mb-2">Wallet Address</h3>
-          <p className="text-white font-mono text-sm break-all bg-gray-800 p-3 rounded-lg">
-            {wallet?.address}
-          </p>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-white font-semibold flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              My Wallets ({wallets.length})
+            </h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => navigate("/create")}
+                className="text-purple-500 p-2 hover:bg-gray-800 rounded-full"
+                data-testid="add-new-wallet-btn"
+                title="Create New Wallet"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => navigate("/import")}
+                className="text-purple-500 p-2 hover:bg-gray-800 rounded-full"
+                data-testid="import-wallet-btn"
+                title="Import Wallet"
+              >
+                <UserPlus className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Wallet List */}
+          <div className="bg-gray-800 rounded-xl overflow-hidden">
+            {wallets.map((w, index) => (
+              <button
+                key={w.id}
+                onClick={() => handleSwitchWallet(w.id)}
+                className={`w-full p-4 flex items-center justify-between border-b border-gray-700 last:border-b-0 ${
+                  w.id === currentWalletId ? "bg-purple-600/20" : "hover:bg-gray-700"
+                }`}
+                data-testid={`wallet-item-${index}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    w.id === currentWalletId ? "bg-purple-600" : "bg-gray-600"
+                  }`}>
+                    <Wallet className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-white font-medium">{w.name || `Wallet ${index + 1}`}</p>
+                    <p className="text-gray-400 text-xs">{w.address.slice(0, 8)}...{w.address.slice(-6)}</p>
+                  </div>
+                </div>
+                {w.id === currentWalletId && (
+                  <Check className="w-5 h-5 text-purple-500" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Current Wallet Details */}
+        <div className="mb-6">
+          <h3 className="text-white font-semibold mb-3">Current Wallet Details</h3>
+          <div className="bg-gray-800 rounded-xl p-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-400 text-sm">Address</span>
+              <button 
+                onClick={() => copyToClipboard(wallet?.address, "Address")}
+                className="text-purple-500 text-sm flex items-center gap-1"
+              >
+                <Copy className="w-4 h-4" /> Copy
+              </button>
+            </div>
+            <p className="text-white font-mono text-sm break-all">
+              {wallet?.address}
+            </p>
+          </div>
         </div>
 
         {wallet?.privateKey && (
           <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-gray-400 text-sm">Private Key</h3>
-              <button onClick={() => setShowPrivateKey(!showPrivateKey)} className="text-purple-500 text-sm">
-                {showPrivateKey ? "Hide" : "Show"}
-              </button>
+            <div className="bg-gray-800 rounded-xl p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400 text-sm">Private Key</span>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowPrivateKey(!showPrivateKey)} className="text-purple-500 text-sm">
+                    {showPrivateKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                  {showPrivateKey && (
+                    <button 
+                      onClick={() => copyToClipboard(wallet.privateKey, "Private Key")}
+                      className="text-purple-500"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <p className={`text-white font-mono text-sm break-all ${!showPrivateKey && "blur-sm select-none"}`}>
+                {wallet.privateKey}
+              </p>
             </div>
-            <p className={`text-white font-mono text-sm break-all bg-gray-800 p-3 rounded-lg ${!showPrivateKey && "blur-sm"}`}>
-              {wallet.privateKey}
-            </p>
           </div>
         )}
 
         {wallet?.mnemonic && (
           <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-gray-400 text-sm">Recovery Phrase</h3>
-              <button onClick={() => setShowMnemonic(!showMnemonic)} className="text-purple-500 text-sm">
-                {showMnemonic ? "Hide" : "Show"}
-              </button>
+            <div className="bg-gray-800 rounded-xl p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400 text-sm">Recovery Phrase</span>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowMnemonic(!showMnemonic)} className="text-purple-500 text-sm">
+                    {showMnemonic ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                  {showMnemonic && (
+                    <button 
+                      onClick={() => copyToClipboard(wallet.mnemonic, "Recovery Phrase")}
+                      className="text-purple-500"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <p className={`text-white font-mono text-sm break-all ${!showMnemonic && "blur-sm select-none"}`}>
+                {wallet.mnemonic}
+              </p>
             </div>
-            <p className={`text-white font-mono text-sm break-all bg-gray-800 p-3 rounded-lg ${!showMnemonic && "blur-sm"}`}>
-              {wallet.mnemonic}
-            </p>
           </div>
         )}
 
@@ -1285,14 +1409,14 @@ function SettingsScreen() {
             data-testid="remove-wallet-btn"
           >
             <Trash2 className="w-5 h-5" />
-            Remove Wallet
+            Remove Current Wallet
           </button>
           <button
             className="w-full py-3 text-red-500 border border-red-500 rounded-lg flex items-center justify-center gap-2"
             onClick={handleLogout}
             data-testid="logout-btn"
           >
-            Logout
+            Logout (Clear All)
           </button>
         </div>
       </div>
