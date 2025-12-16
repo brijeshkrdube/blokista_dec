@@ -1041,16 +1041,15 @@ function ReceiveScreen() {
   const navigate = useNavigate();
   const { getCurrentWallet } = useWalletStore();
   const wallet = getCurrentWallet();
+  const { showToast } = useToast();
 
   const copyAddress = async () => {
     if (!wallet?.address) return;
     
     try {
-      // Try the modern clipboard API first
       await navigator.clipboard.writeText(wallet.address);
-      alert("Address copied to clipboard!");
+      showToast("Address copied!", "success");
     } catch (err) {
-      // Fallback for environments where clipboard API is blocked
       try {
         const textArea = document.createElement("textarea");
         textArea.value = wallet.address;
@@ -1062,9 +1061,8 @@ function ReceiveScreen() {
         textArea.select();
         document.execCommand("copy");
         document.body.removeChild(textArea);
-        alert("Address copied to clipboard!");
+        showToast("Address copied!", "success");
       } catch (fallbackErr) {
-        // If all else fails, show the address in a prompt
         window.prompt("Copy this address:", wallet.address);
       }
     }
