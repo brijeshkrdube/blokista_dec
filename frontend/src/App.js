@@ -60,6 +60,33 @@ function useToast() {
   return context;
 }
 
+// Token Logo Component with fallback
+function TokenLogo({ symbol, size = 40 }) {
+  const [imgError, setImgError] = useState(false);
+  const logoUrl = TOKEN_LOGOS[symbol];
+  
+  if (!logoUrl || imgError) {
+    return (
+      <div 
+        className="token-logo-fallback" 
+        style={{ width: size, height: size, borderRadius: size / 2, fontSize: size * 0.4 }}
+      >
+        {symbol ? symbol[0] : "?"}
+      </div>
+    );
+  }
+  
+  return (
+    <img 
+      src={logoUrl} 
+      alt={symbol} 
+      className="token-logo"
+      style={{ width: size, height: size }}
+      onError={() => setImgError(true)}
+    />
+  );
+}
+
 // Welcome Screen
 function WelcomeScreen() {
   const navigate = useNavigate();
