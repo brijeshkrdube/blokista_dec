@@ -1733,25 +1733,121 @@ function BottomNav({ active }) {
   );
 }
 
-// Main App
+// App Lock Screen - Shown when biometric is enabled
+function AppLockScreen({ onUnlock }) {
+  const [unlocking, setUnlocking] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleUnlock = async () => {
+    setUnlocking(true);
+    setError("");
+    
+    try {
+      const authenticated = await BiometricAuth.authenticate("Unlock Blokista Wallet");
+      if (authenticated) {
+        onUnlock();
+      } else {
+        setError("Authentication failed. Try again.");
+      }
+    } catch (err) {
+      setError("Authentication error. Try again.");
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
+  // Auto-trigger unlock on mount
+  useEffect(() => {
+    handleUnlock();
+  }, []);
+
+  return (
+    <div className="screen-container" data-testid="lock-screen">
+      <div className="flex flex-col items-center justify-center flex-1 px-6">
+        <div className="w-24 h-24 bg-purple-600 rounded-full flex items-center justify-center mb-6">
+          <Lock className="w-12 h-12 text-white" />
+        </div>
+        <h1 className="text-2xl font-bold text-white mb-2">Wallet Locked</h1>
+        <p className="text-gray-400 text-center mb-8">
+          Use your fingerprint or face to unlock
+        </p>
+        
+        {error && (
+          <p className="text-red-500 text-sm mb-4">{error}</p>
+        )}
+        
+        <button
+          className="btn-primary w-full flex items-center justify-center gap-2"
+          onClick={handleUnlock}
+          disabled={unlocking}
+          data-testid="unlock-btn"
+        >
+          {unlocking ? (
+            <><RefreshCw className="w-5 h-5 animate-spin" /> Authenticating...</>
+          ) : (
+            <><Fingerprint className="w-5 h-5" /> Unlock with Biometric</>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Main App with Lock Screen Support
 function App() {
+  const [isLocked, setIsLocked] = useState(true);
+  const [checkingLock, setCheckingLock] = useState(true);
+
+  // Check lock status on app load
+  useEffect(() => {
+    const checkLock = async () => {
+      // If lock is not enabled, unlock immediately
+      if (!AppLock.isEnabled()) {
+        setIsLocked(false);
+        setCheckingLock(false);
+        return;
+      }
+      
+      // Lock is enabled, show lock screen
+      setIsLocked(true);
+      setCheckingLock(false);
+    };
+
+    checkLock();
+  }, []);
+
+  // Show loading while checking
+  if (checkingLock) {
+    return (
+      <div className="app-container">
+        <div className="screen-container flex items-center justify-center">
+          <RefreshCw className="w-8 h-8 text-purple-500 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
       <ToastProvider>
         <div className="app-container">
-          <Routes>
-            <Route path="/" element={<AppEntry />} />
-            <Route path="/create" element={<CreateWalletScreen />} />
-            <Route path="/import" element={<ImportWalletScreen />} />
-            <Route path="/home" element={<HomeScreen />} />
-            <Route path="/send" element={<SendScreen />} />
-            <Route path="/receive" element={<ReceiveScreen />} />
-            <Route path="/add-token" element={<AddTokenScreen />} />
-            <Route path="/add-nft" element={<AddNFTScreen />} />
-            <Route path="/settings" element={<SettingsScreen />} />
-            <Route path="/browser" element={<BrowserScreen />} />
-            <Route path="/scan" element={<QRScannerScreen />} />
-          </Routes>
+          {isLocked ? (
+            <AppLockScreen onUnlock={() => setIsLocked(false)} />
+          ) : (
+            <Routes>
+              <Route path="/" element={<AppEntry />} />
+              <Route path="/create" element={<CreateWalletScreen />} />
+              <Route path="/import" element={<ImportWalletScreen />} />
+              <Route path="/home" element={<HomeScreen />} />
+              <Route path="/send" element={<SendScreen />} />
+              <Route path="/receive" element={<ReceiveScreen />} />
+              <Route path="/add-token" element={<AddTokenScreen />} />
+              <Route path="/add-nft" element={<AddNFTScreen />} />
+              <Route path="/settings" element={<SettingsScreen />} />
+              <Route path="/browser" element={<BrowserScreen />} />
+              <Route path="/scan" element={<QRScannerScreen />} />
+            </Routes>
+          )}
         </div>
       </ToastProvider>
     </BrowserRouter>
