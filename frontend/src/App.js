@@ -1525,14 +1525,52 @@ function SettingsScreen() {
           </div>
         </div>
 
+        {/* Security Section */}
+        <div className="mb-6">
+          <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            Security
+          </h3>
+          
+          {/* Biometric Lock Toggle */}
+          <div className="bg-gray-800 rounded-xl p-4 mb-3">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <Fingerprint className="w-6 h-6 text-purple-500" />
+                <div>
+                  <p className="text-white font-medium">App Lock</p>
+                  <p className="text-gray-400 text-xs">
+                    {biometricAvailable ? "Use fingerprint/face to unlock" : "Biometric not available"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={toggleBiometricLock}
+                disabled={!biometricAvailable}
+                className={`w-14 h-8 rounded-full transition-colors ${
+                  biometricEnabled ? "bg-purple-600" : "bg-gray-600"
+                } ${!biometricAvailable && "opacity-50"}`}
+                data-testid="biometric-toggle"
+              >
+                <div className={`w-6 h-6 bg-white rounded-full transition-transform ${
+                  biometricEnabled ? "translate-x-7" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Private Key - With Biometric Protection */}
         {wallet?.privateKey && (
           <div className="mb-6">
             <div className="bg-gray-800 rounded-xl p-4">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400 text-sm">Private Key</span>
+                <span className="text-gray-400 text-sm flex items-center gap-2">
+                  <Lock className="w-4 h-4" /> Private Key
+                </span>
                 <div className="flex gap-2">
-                  <button onClick={() => setShowPrivateKey(!showPrivateKey)} className="text-purple-500 text-sm">
-                    {showPrivateKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <button onClick={handleShowPrivateKey} className="text-purple-500 text-sm flex items-center gap-1">
+                    {showPrivateKey ? <EyeOff className="w-4 h-4" /> : <><Fingerprint className="w-4 h-4" /> View</>}
                   </button>
                   {showPrivateKey && (
                     <button 
@@ -1547,18 +1585,26 @@ function SettingsScreen() {
               <p className={`text-white font-mono text-sm break-all ${!showPrivateKey && "blur-sm select-none"}`}>
                 {wallet.privateKey}
               </p>
+              {!showPrivateKey && (
+                <p className="text-gray-500 text-xs mt-2 flex items-center gap-1">
+                  <Fingerprint className="w-3 h-3" /> Tap "View" and authenticate to reveal
+                </p>
+              )}
             </div>
           </div>
         )}
 
+        {/* Recovery Phrase - With Biometric Protection */}
         {wallet?.mnemonic && (
           <div className="mb-6">
             <div className="bg-gray-800 rounded-xl p-4">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400 text-sm">Recovery Phrase</span>
+                <span className="text-gray-400 text-sm flex items-center gap-2">
+                  <Lock className="w-4 h-4" /> Recovery Phrase
+                </span>
                 <div className="flex gap-2">
-                  <button onClick={() => setShowMnemonic(!showMnemonic)} className="text-purple-500 text-sm">
-                    {showMnemonic ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <button onClick={handleShowMnemonic} className="text-purple-500 text-sm flex items-center gap-1">
+                    {showMnemonic ? <EyeOff className="w-4 h-4" /> : <><Fingerprint className="w-4 h-4" /> View</>}
                   </button>
                   {showMnemonic && (
                     <button 
@@ -1573,6 +1619,11 @@ function SettingsScreen() {
               <p className={`text-white font-mono text-sm break-all ${!showMnemonic && "blur-sm select-none"}`}>
                 {wallet.mnemonic}
               </p>
+              {!showMnemonic && (
+                <p className="text-gray-500 text-xs mt-2 flex items-center gap-1">
+                  <Fingerprint className="w-3 h-3" /> Tap "View" and authenticate to reveal
+                </p>
+              )}
             </div>
           </div>
         )}
