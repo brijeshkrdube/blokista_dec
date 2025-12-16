@@ -294,9 +294,31 @@ function HomeScreen() {
     };
   }, [wallet?.address, currentChainId, tokens.length]); // Only depend on stable values
 
-  const copyAddress = () => {
-    if (wallet?.address) {
-      navigator.clipboard.writeText(wallet.address);
+  const copyAddress = async () => {
+    if (!wallet?.address) return;
+    
+    try {
+      // Try the modern clipboard API first
+      await navigator.clipboard.writeText(wallet.address);
+      alert("Address copied to clipboard!");
+    } catch (err) {
+      // Fallback for environments where clipboard API is blocked
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = wallet.address;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        alert("Address copied to clipboard!");
+      } catch (fallbackErr) {
+        // If all else fails, show the address in a prompt
+        window.prompt("Copy this address:", wallet.address);
+      }
     }
   };
 
