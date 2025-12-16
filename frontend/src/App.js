@@ -6,9 +6,11 @@ import useWalletStore from "./store/walletStore";
 import { CHAINS } from "./config/chains";
 import { WalletService } from "./utils/walletService";
 import { PriceService } from "./utils/priceService";
+import { BiometricAuth, BarcodeScanner, AppLock, SecureAccess, isNative } from "./utils/nativeFeatures";
 import {
   Wallet, Send, ArrowDown, RefreshCw, Copy, ChevronDown, Plus, Settings,
-  Globe, ArrowLeft, Check, Eye, EyeOff, Trash2, QrCode, Image, X, Search, Camera, UserPlus, Users
+  Globe, ArrowLeft, Check, Eye, EyeOff, Trash2, QrCode, Image, X, Search, Camera, UserPlus, Users,
+  Lock, Fingerprint, Shield
 } from "lucide-react";
 import "./App.css";
 
