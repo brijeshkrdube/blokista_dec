@@ -1311,7 +1311,7 @@ function QRScannerScreen({ onScan, onClose }) {
   );
 }
 
-// Settings Screen with Multi-Wallet Support
+// Settings Screen with Multi-Wallet Support and Biometric Security
 function SettingsScreen() {
   const navigate = useNavigate();
   const { getCurrentWallet, clearWallet, removeWallet, wallets, setCurrentWallet, currentWalletId } = useWalletStore();
@@ -1319,7 +1319,18 @@ function SettingsScreen() {
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [showWalletSelector, setShowWalletSelector] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(AppLock.isEnabled());
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
   const { showToast } = useToast();
+
+  // Check if biometric is available on mount
+  useEffect(() => {
+    const checkBiometric = async () => {
+      const available = await BiometricAuth.isAvailable();
+      setBiometricAvailable(available);
+    };
+    checkBiometric();
+  }, []);
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout? Make sure you have saved your recovery phrase.")) {
@@ -1344,7 +1355,68 @@ function SettingsScreen() {
     showToast("Wallet switched", "success");
   };
 
+  // Toggle biometric lock
+  const toggleBiometricLock = async () => {
+    if (!biometricEnabled) {
+      // Enabling - verify biometric first
+      const authenticated = await BiometricAuth.authenticate("Enable biometric lock");
+      if (authenticated) {
+        AppLock.setEnabled(true);
+        setBiometricEnabled(true);
+        showToast("Biometric lock enabled", "success");
+      } else {
+        showToast("Authentication failed", "error");
+      }
+    } else {
+      // Disabling
+      AppLock.setEnabled(false);
+      setBiometricEnabled(false);
+      showToast("Biometric lock disabled", "success");
+    }
+  };
+
+  // Secure view for private key
+  const handleShowPrivateKey = async () => {
+    if (showPrivateKey) {
+      setShowPrivateKey(false);
+      return;
+    }
+    
+    const authenticated = await SecureAccess.requestAccess("Private Key");
+    if (authenticated) {
+      setShowPrivateKey(true);
+      showToast("Access granted", "success");
+    } else {
+      showToast("Authentication required", "error");
+    }
+  };
+
+  // Secure view for mnemonic
+  const handleShowMnemonic = async () => {
+    if (showMnemonic) {
+      setShowMnemonic(false);
+      return;
+    }
+    
+    const authenticated = await SecureAccess.requestAccess("Recovery Phrase");
+    if (authenticated) {
+      setShowMnemonic(true);
+      showToast("Access granted", "success");
+    } else {
+      showToast("Authentication required", "error");
+    }
+  };
+
   const copyToClipboard = async (text, label) => {
+    // Require authentication before copying sensitive data
+    if (label === "Private Key" || label === "Recovery Phrase") {
+      const authenticated = await SecureAccess.requestAccess(label);
+      if (!authenticated) {
+        showToast("Authentication required to copy", "error");
+        return;
+      }
+    }
+    
     try {
       await navigator.clipboard.writeText(text);
       showToast(`${label} copied!`, "success");
