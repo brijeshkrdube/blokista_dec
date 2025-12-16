@@ -1239,7 +1239,7 @@ function QRScannerScreen({ onScan, onClose }) {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-        {!cameraError ? (
+        {!cameraError && hasPermission ? (
           <div className="relative mb-6">
             <video
               ref={videoRef}
@@ -1248,13 +1248,43 @@ function QRScannerScreen({ onScan, onClose }) {
               className="w-64 h-64 rounded-xl bg-gray-800 object-cover"
             />
             <div className="absolute inset-0 border-2 border-purple-500 rounded-xl pointer-events-none" />
+            <div className="scanner-line" />
             <p className="text-white text-center mt-4">Point camera at QR code</p>
+            
+            {/* Native scan button for mobile */}
+            {isNative() && (
+              <button
+                className="btn-primary mt-4 w-full"
+                onClick={handleNativeScan}
+                disabled={scanning}
+              >
+                {scanning ? (
+                  <><RefreshCw className="w-5 h-5 animate-spin mr-2" /> Scanning...</>
+                ) : (
+                  <><QrCode className="w-5 h-5 mr-2" /> Tap to Scan</>
+                )}
+              </button>
+            )}
           </div>
         ) : (
           <div className="text-center mb-6">
             <Camera className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400 mb-2">Camera not available</p>
-            <p className="text-gray-500 text-sm">Enter address manually below</p>
+            <p className="text-gray-500 text-sm mb-4">Grant camera permission or enter address manually</p>
+            
+            {/* Retry permission button */}
+            <button
+              className="btn-secondary mb-4"
+              onClick={async () => {
+                const granted = await BarcodeScanner.requestPermission();
+                if (granted) {
+                  setHasPermission(true);
+                  setCameraError(false);
+                }
+              }}
+            >
+              <Camera className="w-5 h-5 mr-2" /> Grant Camera Access
+            </button>
           </div>
         )}
 
