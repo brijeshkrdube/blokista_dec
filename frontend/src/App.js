@@ -109,7 +109,7 @@ function CreateWalletScreen() {
               onClick={() => setStep(2)}
               disabled={!showMnemonic}
             >
-              I've Written It Down
+              I Have Written It Down
             </button>
           </>
         ) : (
