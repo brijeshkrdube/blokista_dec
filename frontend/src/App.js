@@ -99,7 +99,7 @@ function CreateWalletScreen() {
                 {mnemonic.split(" ").map((word, i) => (
                   <div key={i} className="bg-gray-700 rounded-lg px-3 py-2 text-sm">
                     <span className="text-gray-500 mr-2">{i + 1}.</span>
-                    <span className={showMnemonic ? "text-white" : "blur-sm text-white"}>{word}</span>
+                    <span className={showMnemonic ? "text-white" : "blur-sm text-white"} aria-hidden={!showMnemonic}>{word}</span>
                   </div>
                 ))}
               </div>
