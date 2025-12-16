@@ -332,18 +332,16 @@ function HomeScreen() {
     };
   }, [wallet?.address, currentChainId, tokens.length]); // Only depend on stable values
 
-  const copyAddress = async () => {
-    if (!wallet?.address) return;
-    
+  const { showToast } = useToast();
+
+  const copyToClipboard = async (text, label = "Address") => {
     try {
-      // Try the modern clipboard API first
-      await navigator.clipboard.writeText(wallet.address);
-      alert("Address copied to clipboard!");
+      await navigator.clipboard.writeText(text);
+      showToast(`${label} copied!`, "success");
     } catch (err) {
-      // Fallback for environments where clipboard API is blocked
       try {
         const textArea = document.createElement("textarea");
-        textArea.value = wallet.address;
+        textArea.value = text;
         textArea.style.position = "fixed";
         textArea.style.left = "-999999px";
         textArea.style.top = "-999999px";
@@ -352,13 +350,14 @@ function HomeScreen() {
         textArea.select();
         document.execCommand("copy");
         document.body.removeChild(textArea);
-        alert("Address copied to clipboard!");
+        showToast(`${label} copied!`, "success");
       } catch (fallbackErr) {
-        // If all else fails, show the address in a prompt
-        window.prompt("Copy this address:", wallet.address);
+        window.prompt(`Copy this ${label.toLowerCase()}:`, text);
       }
     }
   };
+
+  const copyAddress = () => copyToClipboard(wallet?.address, "Address");
 
   if (!wallet) {
     return <WelcomeScreen />;
