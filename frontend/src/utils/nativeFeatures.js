@@ -15,7 +15,7 @@ export const BiometricAuth = {
         console.log("Not running in native app");
         return false;
       }
-      
+
       const { BiometricAuth } = await import('@aparajita/capacitor-biometric-auth');
       const result = await BiometricAuth.checkBiometry();
       return result.isAvailable;
@@ -37,7 +37,7 @@ export const BiometricAuth = {
         console.log("Web mode - skipping biometric");
         return true;
       }
-      
+
       const { BiometricAuth } = await import('@aparajita/capacitor-biometric-auth');
       await BiometricAuth.authenticate({
         reason: reason,
@@ -80,7 +80,7 @@ export const BarcodeScanner = {
         stream.getTracks().forEach(track => track.stop());
         return true;
       }
-      
+
       const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning');
       const { camera } = await BarcodeScanner.requestPermissions();
       return camera === 'granted';
@@ -97,9 +97,9 @@ export const BarcodeScanner = {
         // For web, return null - will use manual input
         throw new Error("Use web camera implementation");
       }
-      
+
       const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning');
-      
+
       // Check permission first
       const { camera } = await BarcodeScanner.checkPermissions();
       if (camera !== 'granted') {
@@ -108,14 +108,14 @@ export const BarcodeScanner = {
           throw new Error("Camera permission denied");
         }
       }
-      
+
       // Start scanning
       const result = await BarcodeScanner.scan();
-      
+
       if (result.barcodes && result.barcodes.length > 0) {
         return result.barcodes[0].rawValue;
       }
-      
+
       return null;
     } catch (error) {
       console.error("Scan error:", error);
@@ -127,26 +127,26 @@ export const BarcodeScanner = {
 // App Lock State Management
 export const AppLock = {
   STORAGE_KEY: 'app_lock_enabled',
-  
+
   isEnabled: () => {
     return localStorage.getItem(AppLock.STORAGE_KEY) === 'true';
   },
-  
+
   setEnabled: (enabled) => {
     localStorage.setItem(AppLock.STORAGE_KEY, enabled ? 'true' : 'false');
   },
-  
+
   // Check and authenticate on app open
   checkAndAuthenticate: async () => {
     if (!AppLock.isEnabled()) {
       return true; // No lock enabled
     }
-    
+
     const isAvailable = await BiometricAuth.isAvailable();
     if (!isAvailable) {
       return true; // Biometric not available, allow access
     }
-    
+
     return await BiometricAuth.authenticate("Unlock Blokista Wallet");
   },
 };
@@ -156,7 +156,7 @@ export const SecureAccess = {
   // Require biometric to view sensitive data
   requestAccess: async (dataType = "sensitive data") => {
     const isAvailable = await BiometricAuth.isAvailable();
-    
+
     if (!isAvailable) {
       // Fallback to password prompt on web
       const password = window.prompt(`Enter password to view ${dataType}:`);
@@ -164,7 +164,7 @@ export const SecureAccess = {
       // In production, you'd verify against stored hash
       return password && password.length > 0;
     }
-    
+
     return await BiometricAuth.authenticate(`Authenticate to view ${dataType}`);
   },
 };

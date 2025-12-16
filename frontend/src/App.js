@@ -6,11 +6,9 @@ import useWalletStore from "./store/walletStore";
 import { CHAINS } from "./config/chains";
 import { WalletService } from "./utils/walletService";
 import { PriceService } from "./utils/priceService";
-import { BiometricAuth, BarcodeScanner, AppLock, SecureAccess, isNative } from "./utils/nativeFeatures";
 import {
   Wallet, Send, ArrowDown, RefreshCw, Copy, ChevronDown, Plus, Settings,
-  Globe, ArrowLeft, Check, Eye, EyeOff, Trash2, QrCode, Image, X, Search, Camera, UserPlus, Users,
-  Lock, Fingerprint, Shield
+  Globe, ArrowLeft, Check, Eye, EyeOff, Trash2, QrCode, Image, X, Search, Camera, UserPlus, Users
 } from "lucide-react";
 import "./App.css";
 
@@ -1116,37 +1114,18 @@ function ReceiveScreen() {
   );
 }
 
-// QR Scanner Screen - WITH NATIVE SCANNER SUPPORT
+// QR Scanner Screen - FIXED
 function QRScannerScreen({ onScan, onClose }) {
   const navigate = useNavigate();
-  const { showToast } = useToast();
   const [manualAddress, setManualAddress] = useState("");
   const [cameraError, setCameraError] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [hasPermission, setHasPermission] = useState(false);
   const videoRef = React.useRef(null);
   const streamRef = React.useRef(null);
 
   useEffect(() => {
     let active = true;
     
-    const initScanner = async () => {
-      // Try native scanner first (for mobile app)
-      if (isNative()) {
-        try {
-          const hasNativePermission = await BarcodeScanner.requestPermission();
-          if (active && hasNativePermission) {
-            setHasPermission(true);
-            // Auto-start native scan
-            handleNativeScan();
-            return;
-          }
-        } catch (err) {
-          console.log("Native scanner not available, falling back to web camera");
-        }
-      }
-      
-      // Fallback to web camera
+    const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" }
@@ -1155,7 +1134,6 @@ function QRScannerScreen({ onScan, onClose }) {
         if (active && videoRef.current) {
           videoRef.current.srcObject = stream;
           streamRef.current = stream;
-          setHasPermission(true);
         }
       } catch (err) {
         console.error("Camera error:", err);
@@ -1165,7 +1143,7 @@ function QRScannerScreen({ onScan, onClose }) {
       }
     };
 
-    initScanner();
+    startCamera();
 
     return () => {
       active = false;
@@ -1175,45 +1153,13 @@ function QRScannerScreen({ onScan, onClose }) {
     };
   }, []);
 
-  // Native barcode scan handler
-  const handleNativeScan = async () => {
-    setScanning(true);
-    try {
-      const result = await BarcodeScanner.scan();
-      if (result) {
-        // Check if it's a valid Ethereum address
-        let address = result;
-        
-        // Handle ethereum: URI format
-        if (result.startsWith("ethereum:")) {
-          address = result.replace("ethereum:", "").split("@")[0].split("?")[0];
-        }
-        
-        if (ethers.isAddress(address)) {
-          showToast("QR Code scanned successfully!", "success");
-          if (onScan) {
-            onScan(address);
-          }
-        } else {
-          showToast("Invalid address in QR code", "error");
-        }
-      }
-    } catch (err) {
-      console.error("Scan error:", err);
-      showToast("Scan failed. Try manual entry.", "error");
-    } finally {
-      setScanning(false);
-    }
-  };
-
   const handleManualSubmit = () => {
     if (ethers.isAddress(manualAddress)) {
-      showToast("Address validated!", "success");
       if (onScan) {
         onScan(manualAddress);
       }
     } else {
-      showToast("Invalid address format", "error");
+      alert("Invalid address format");
     }
   };
 
@@ -1239,7 +1185,7 @@ function QRScannerScreen({ onScan, onClose }) {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-        {!cameraError && hasPermission ? (
+        {!cameraError ? (
           <div className="relative mb-6">
             <video
               ref={videoRef}
@@ -1248,43 +1194,13 @@ function QRScannerScreen({ onScan, onClose }) {
               className="w-64 h-64 rounded-xl bg-gray-800 object-cover"
             />
             <div className="absolute inset-0 border-2 border-purple-500 rounded-xl pointer-events-none" />
-            <div className="scanner-line" />
             <p className="text-white text-center mt-4">Point camera at QR code</p>
-            
-            {/* Native scan button for mobile */}
-            {isNative() && (
-              <button
-                className="btn-primary mt-4 w-full"
-                onClick={handleNativeScan}
-                disabled={scanning}
-              >
-                {scanning ? (
-                  <><RefreshCw className="w-5 h-5 animate-spin mr-2" /> Scanning...</>
-                ) : (
-                  <><QrCode className="w-5 h-5 mr-2" /> Tap to Scan</>
-                )}
-              </button>
-            )}
           </div>
         ) : (
           <div className="text-center mb-6">
             <Camera className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400 mb-2">Camera not available</p>
-            <p className="text-gray-500 text-sm mb-4">Grant camera permission or enter address manually</p>
-            
-            {/* Retry permission button */}
-            <button
-              className="btn-secondary mb-4"
-              onClick={async () => {
-                const granted = await BarcodeScanner.requestPermission();
-                if (granted) {
-                  setHasPermission(true);
-                  setCameraError(false);
-                }
-              }}
-            >
-              <Camera className="w-5 h-5 mr-2" /> Grant Camera Access
-            </button>
+            <p className="text-gray-500 text-sm">Enter address manually below</p>
           </div>
         )}
 
@@ -1311,7 +1227,7 @@ function QRScannerScreen({ onScan, onClose }) {
   );
 }
 
-// Settings Screen with Multi-Wallet Support and Biometric Security
+// Settings Screen with Multi-Wallet Support
 function SettingsScreen() {
   const navigate = useNavigate();
   const { getCurrentWallet, clearWallet, removeWallet, wallets, setCurrentWallet, currentWalletId } = useWalletStore();
@@ -1319,18 +1235,7 @@ function SettingsScreen() {
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [showWalletSelector, setShowWalletSelector] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(AppLock.isEnabled());
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
   const { showToast } = useToast();
-
-  // Check if biometric is available on mount
-  useEffect(() => {
-    const checkBiometric = async () => {
-      const available = await BiometricAuth.isAvailable();
-      setBiometricAvailable(available);
-    };
-    checkBiometric();
-  }, []);
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout? Make sure you have saved your recovery phrase.")) {
@@ -1355,68 +1260,7 @@ function SettingsScreen() {
     showToast("Wallet switched", "success");
   };
 
-  // Toggle biometric lock
-  const toggleBiometricLock = async () => {
-    if (!biometricEnabled) {
-      // Enabling - verify biometric first
-      const authenticated = await BiometricAuth.authenticate("Enable biometric lock");
-      if (authenticated) {
-        AppLock.setEnabled(true);
-        setBiometricEnabled(true);
-        showToast("Biometric lock enabled", "success");
-      } else {
-        showToast("Authentication failed", "error");
-      }
-    } else {
-      // Disabling
-      AppLock.setEnabled(false);
-      setBiometricEnabled(false);
-      showToast("Biometric lock disabled", "success");
-    }
-  };
-
-  // Secure view for private key
-  const handleShowPrivateKey = async () => {
-    if (showPrivateKey) {
-      setShowPrivateKey(false);
-      return;
-    }
-    
-    const authenticated = await SecureAccess.requestAccess("Private Key");
-    if (authenticated) {
-      setShowPrivateKey(true);
-      showToast("Access granted", "success");
-    } else {
-      showToast("Authentication required", "error");
-    }
-  };
-
-  // Secure view for mnemonic
-  const handleShowMnemonic = async () => {
-    if (showMnemonic) {
-      setShowMnemonic(false);
-      return;
-    }
-    
-    const authenticated = await SecureAccess.requestAccess("Recovery Phrase");
-    if (authenticated) {
-      setShowMnemonic(true);
-      showToast("Access granted", "success");
-    } else {
-      showToast("Authentication required", "error");
-    }
-  };
-
   const copyToClipboard = async (text, label) => {
-    // Require authentication before copying sensitive data
-    if (label === "Private Key" || label === "Recovery Phrase") {
-      const authenticated = await SecureAccess.requestAccess(label);
-      if (!authenticated) {
-        showToast("Authentication required to copy", "error");
-        return;
-      }
-    }
-    
     try {
       await navigator.clipboard.writeText(text);
       showToast(`${label} copied!`, "success");
@@ -1525,52 +1369,14 @@ function SettingsScreen() {
           </div>
         </div>
 
-        {/* Security Section */}
-        <div className="mb-6">
-          <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            Security
-          </h3>
-          
-          {/* Biometric Lock Toggle */}
-          <div className="bg-gray-800 rounded-xl p-4 mb-3">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <Fingerprint className="w-6 h-6 text-purple-500" />
-                <div>
-                  <p className="text-white font-medium">App Lock</p>
-                  <p className="text-gray-400 text-xs">
-                    {biometricAvailable ? "Use fingerprint/face to unlock" : "Biometric not available"}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={toggleBiometricLock}
-                disabled={!biometricAvailable}
-                className={`w-14 h-8 rounded-full transition-colors ${
-                  biometricEnabled ? "bg-purple-600" : "bg-gray-600"
-                } ${!biometricAvailable && "opacity-50"}`}
-                data-testid="biometric-toggle"
-              >
-                <div className={`w-6 h-6 bg-white rounded-full transition-transform ${
-                  biometricEnabled ? "translate-x-7" : "translate-x-1"
-                }`} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Private Key - With Biometric Protection */}
         {wallet?.privateKey && (
           <div className="mb-6">
             <div className="bg-gray-800 rounded-xl p-4">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400 text-sm flex items-center gap-2">
-                  <Lock className="w-4 h-4" /> Private Key
-                </span>
+                <span className="text-gray-400 text-sm">Private Key</span>
                 <div className="flex gap-2">
-                  <button onClick={handleShowPrivateKey} className="text-purple-500 text-sm flex items-center gap-1">
-                    {showPrivateKey ? <EyeOff className="w-4 h-4" /> : <><Fingerprint className="w-4 h-4" /> View</>}
+                  <button onClick={() => setShowPrivateKey(!showPrivateKey)} className="text-purple-500 text-sm">
+                    {showPrivateKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                   {showPrivateKey && (
                     <button 
@@ -1585,26 +1391,18 @@ function SettingsScreen() {
               <p className={`text-white font-mono text-sm break-all ${!showPrivateKey && "blur-sm select-none"}`}>
                 {wallet.privateKey}
               </p>
-              {!showPrivateKey && (
-                <p className="text-gray-500 text-xs mt-2 flex items-center gap-1">
-                  <Fingerprint className="w-3 h-3" /> Tap "View" and authenticate to reveal
-                </p>
-              )}
             </div>
           </div>
         )}
 
-        {/* Recovery Phrase - With Biometric Protection */}
         {wallet?.mnemonic && (
           <div className="mb-6">
             <div className="bg-gray-800 rounded-xl p-4">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400 text-sm flex items-center gap-2">
-                  <Lock className="w-4 h-4" /> Recovery Phrase
-                </span>
+                <span className="text-gray-400 text-sm">Recovery Phrase</span>
                 <div className="flex gap-2">
-                  <button onClick={handleShowMnemonic} className="text-purple-500 text-sm flex items-center gap-1">
-                    {showMnemonic ? <EyeOff className="w-4 h-4" /> : <><Fingerprint className="w-4 h-4" /> View</>}
+                  <button onClick={() => setShowMnemonic(!showMnemonic)} className="text-purple-500 text-sm">
+                    {showMnemonic ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                   {showMnemonic && (
                     <button 
@@ -1619,11 +1417,6 @@ function SettingsScreen() {
               <p className={`text-white font-mono text-sm break-all ${!showMnemonic && "blur-sm select-none"}`}>
                 {wallet.mnemonic}
               </p>
-              {!showMnemonic && (
-                <p className="text-gray-500 text-xs mt-2 flex items-center gap-1">
-                  <Fingerprint className="w-3 h-3" /> Tap "View" and authenticate to reveal
-                </p>
-              )}
             </div>
           </div>
         )}
@@ -1733,121 +1526,25 @@ function BottomNav({ active }) {
   );
 }
 
-// App Lock Screen - Shown when biometric is enabled
-function AppLockScreen({ onUnlock }) {
-  const [unlocking, setUnlocking] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleUnlock = async () => {
-    setUnlocking(true);
-    setError("");
-    
-    try {
-      const authenticated = await BiometricAuth.authenticate("Unlock Blokista Wallet");
-      if (authenticated) {
-        onUnlock();
-      } else {
-        setError("Authentication failed. Try again.");
-      }
-    } catch (err) {
-      setError("Authentication error. Try again.");
-    } finally {
-      setUnlocking(false);
-    }
-  };
-
-  // Auto-trigger unlock on mount
-  useEffect(() => {
-    handleUnlock();
-  }, []);
-
-  return (
-    <div className="screen-container" data-testid="lock-screen">
-      <div className="flex flex-col items-center justify-center flex-1 px-6">
-        <div className="w-24 h-24 bg-purple-600 rounded-full flex items-center justify-center mb-6">
-          <Lock className="w-12 h-12 text-white" />
-        </div>
-        <h1 className="text-2xl font-bold text-white mb-2">Wallet Locked</h1>
-        <p className="text-gray-400 text-center mb-8">
-          Use your fingerprint or face to unlock
-        </p>
-        
-        {error && (
-          <p className="text-red-500 text-sm mb-4">{error}</p>
-        )}
-        
-        <button
-          className="btn-primary w-full flex items-center justify-center gap-2"
-          onClick={handleUnlock}
-          disabled={unlocking}
-          data-testid="unlock-btn"
-        >
-          {unlocking ? (
-            <><RefreshCw className="w-5 h-5 animate-spin" /> Authenticating...</>
-          ) : (
-            <><Fingerprint className="w-5 h-5" /> Unlock with Biometric</>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Main App with Lock Screen Support
+// Main App
 function App() {
-  const [isLocked, setIsLocked] = useState(true);
-  const [checkingLock, setCheckingLock] = useState(true);
-
-  // Check lock status on app load
-  useEffect(() => {
-    const checkLock = async () => {
-      // If lock is not enabled, unlock immediately
-      if (!AppLock.isEnabled()) {
-        setIsLocked(false);
-        setCheckingLock(false);
-        return;
-      }
-      
-      // Lock is enabled, show lock screen
-      setIsLocked(true);
-      setCheckingLock(false);
-    };
-
-    checkLock();
-  }, []);
-
-  // Show loading while checking
-  if (checkingLock) {
-    return (
-      <div className="app-container">
-        <div className="screen-container flex items-center justify-center">
-          <RefreshCw className="w-8 h-8 text-purple-500 animate-spin" />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <BrowserRouter>
       <ToastProvider>
         <div className="app-container">
-          {isLocked ? (
-            <AppLockScreen onUnlock={() => setIsLocked(false)} />
-          ) : (
-            <Routes>
-              <Route path="/" element={<AppEntry />} />
-              <Route path="/create" element={<CreateWalletScreen />} />
-              <Route path="/import" element={<ImportWalletScreen />} />
-              <Route path="/home" element={<HomeScreen />} />
-              <Route path="/send" element={<SendScreen />} />
-              <Route path="/receive" element={<ReceiveScreen />} />
-              <Route path="/add-token" element={<AddTokenScreen />} />
-              <Route path="/add-nft" element={<AddNFTScreen />} />
-              <Route path="/settings" element={<SettingsScreen />} />
-              <Route path="/browser" element={<BrowserScreen />} />
-              <Route path="/scan" element={<QRScannerScreen />} />
-            </Routes>
-          )}
+          <Routes>
+            <Route path="/" element={<AppEntry />} />
+            <Route path="/create" element={<CreateWalletScreen />} />
+            <Route path="/import" element={<ImportWalletScreen />} />
+            <Route path="/home" element={<HomeScreen />} />
+            <Route path="/send" element={<SendScreen />} />
+            <Route path="/receive" element={<ReceiveScreen />} />
+            <Route path="/add-token" element={<AddTokenScreen />} />
+            <Route path="/add-nft" element={<AddNFTScreen />} />
+            <Route path="/settings" element={<SettingsScreen />} />
+            <Route path="/browser" element={<BrowserScreen />} />
+            <Route path="/scan" element={<QRScannerScreen />} />
+          </Routes>
         </div>
       </ToastProvider>
     </BrowserRouter>
