@@ -510,11 +510,7 @@ function HomeScreen() {
 
             {/* Native Token */}
             <div className="token-item" data-testid="native-token">
-              {TOKEN_LOGOS[currentChain.symbol] ? (
-                <img src={TOKEN_LOGOS[currentChain.symbol]} alt={currentChain.symbol} className="token-logo" />
-              ) : (
-                <div className="token-icon">{currentChain.symbol[0]}</div>
-              )}
+              <TokenLogo symbol={currentChain.symbol} size={40} />
               <div className="flex-1">
                 <p className="text-white font-medium">{currentChain.symbol}</p>
                 <p className="text-gray-400 text-sm">{parseFloat(balance).toFixed(4)}</p>
