@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, createContext, useContext } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { ethers } from "ethers";
@@ -8,19 +8,57 @@ import { WalletService } from "./utils/walletService";
 import { PriceService } from "./utils/priceService";
 import {
   Wallet, Send, ArrowDown, RefreshCw, Copy, ChevronDown, Plus, Settings,
-  Globe, ArrowLeft, Check, Eye, EyeOff, Trash2, QrCode, Image, X, Search, Camera
+  Globe, ArrowLeft, Check, Eye, EyeOff, Trash2, QrCode, Image, X, Search, Camera, UserPlus, Users
 } from "lucide-react";
 import "./App.css";
 
-// Token logos
+// Token logos - Using reliable CDN sources
 const TOKEN_LOGOS = {
-  BCC: "https://bccscan.com/images/logo-bcc.png",
-  ETH: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
-  BNB: "https://cryptologos.cc/logos/bnb-bnb-logo.png",
-  MATIC: "https://cryptologos.cc/logos/polygon-matic-logo.png",
-  USDT: "https://cryptologos.cc/logos/tether-usdt-logo.png",
-  USDC: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png",
+  BCC: "https://raw.githubusercontent.com/ApeSwapFinance/assets/main/blockchains/bcc/logo.png",
+  ETH: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png",
+  BNB: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/binance/info/logo.png",
+  MATIC: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png",
+  USDT: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png",
+  USDC: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
 };
+
+// Toast Context for notifications
+const ToastContext = createContext();
+
+function ToastProvider({ children }) {
+  const [toasts, setToasts] = useState([]);
+
+  const showToast = (message, type = "success") => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3000);
+  };
+
+  return (
+    <ToastContext.Provider value={{ showToast }}>
+      {children}
+      <div className="toast-container">
+        {toasts.map((toast) => (
+          <div key={toast.id} className={`toast toast-${toast.type}`}>
+            {toast.type === "success" && <Check className="w-5 h-5" />}
+            {toast.type === "error" && <X className="w-5 h-5" />}
+            <span>{toast.message}</span>
+          </div>
+        ))}
+      </div>
+    </ToastContext.Provider>
+  );
+}
+
+function useToast() {
+  const context = useContext(ToastContext);
+  if (!context) {
+    return { showToast: (msg) => console.log(msg) };
+  }
+  return context;
+}
 
 // Welcome Screen
 function WelcomeScreen() {
