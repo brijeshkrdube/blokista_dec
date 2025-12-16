@@ -1511,21 +1511,23 @@ function BottomNav({ active }) {
 function App() {
   return (
     <BrowserRouter>
-      <div className="app-container">
-        <Routes>
-          <Route path="/" element={<AppEntry />} />
-          <Route path="/create" element={<CreateWalletScreen />} />
-          <Route path="/import" element={<ImportWalletScreen />} />
-          <Route path="/home" element={<HomeScreen />} />
-          <Route path="/send" element={<SendScreen />} />
-          <Route path="/receive" element={<ReceiveScreen />} />
-          <Route path="/add-token" element={<AddTokenScreen />} />
-          <Route path="/add-nft" element={<AddNFTScreen />} />
-          <Route path="/settings" element={<SettingsScreen />} />
-          <Route path="/browser" element={<BrowserScreen />} />
-          <Route path="/scan" element={<QRScannerScreen />} />
-        </Routes>
-      </div>
+      <ToastProvider>
+        <div className="app-container">
+          <Routes>
+            <Route path="/" element={<AppEntry />} />
+            <Route path="/create" element={<CreateWalletScreen />} />
+            <Route path="/import" element={<ImportWalletScreen />} />
+            <Route path="/home" element={<HomeScreen />} />
+            <Route path="/send" element={<SendScreen />} />
+            <Route path="/receive" element={<ReceiveScreen />} />
+            <Route path="/add-token" element={<AddTokenScreen />} />
+            <Route path="/add-nft" element={<AddNFTScreen />} />
+            <Route path="/settings" element={<SettingsScreen />} />
+            <Route path="/browser" element={<BrowserScreen />} />
+            <Route path="/scan" element={<QRScannerScreen />} />
+          </Routes>
+        </div>
+      </ToastProvider>
     </BrowserRouter>
   );
 }
