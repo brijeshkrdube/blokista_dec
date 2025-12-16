@@ -116,7 +116,7 @@ function CreateWalletScreen() {
           <>
             <h2 className="text-xl font-bold text-white mb-2">Confirm Recovery Phrase</h2>
             <p className="text-gray-400 text-sm mb-6">
-              Please confirm you've saved your recovery phrase.
+              Please confirm you have saved your recovery phrase.
             </p>
             <label className="flex items-center gap-3 text-white mb-6">
               <input
