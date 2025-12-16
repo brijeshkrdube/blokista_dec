@@ -86,7 +86,7 @@ function CreateWalletScreen() {
           <>
             <h2 className="text-xl font-bold text-white mb-2">Recovery Phrase</h2>
             <p className="text-gray-400 text-sm mb-6">
-              Write down these 12 words in order. Never share them with anyone.
+              Write down these 12 words in order. Never share them with anyone!
             </p>
             <div className="bg-gray-800 rounded-xl p-4 mb-6 relative">
               <button
