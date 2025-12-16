@@ -1116,18 +1116,37 @@ function ReceiveScreen() {
   );
 }
 
-// QR Scanner Screen - FIXED
+// QR Scanner Screen - WITH NATIVE SCANNER SUPPORT
 function QRScannerScreen({ onScan, onClose }) {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [manualAddress, setManualAddress] = useState("");
   const [cameraError, setCameraError] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
   const videoRef = React.useRef(null);
   const streamRef = React.useRef(null);
 
   useEffect(() => {
     let active = true;
     
-    const startCamera = async () => {
+    const initScanner = async () => {
+      // Try native scanner first (for mobile app)
+      if (isNative()) {
+        try {
+          const hasNativePermission = await BarcodeScanner.requestPermission();
+          if (active && hasNativePermission) {
+            setHasPermission(true);
+            // Auto-start native scan
+            handleNativeScan();
+            return;
+          }
+        } catch (err) {
+          console.log("Native scanner not available, falling back to web camera");
+        }
+      }
+      
+      // Fallback to web camera
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" }
@@ -1136,6 +1155,7 @@ function QRScannerScreen({ onScan, onClose }) {
         if (active && videoRef.current) {
           videoRef.current.srcObject = stream;
           streamRef.current = stream;
+          setHasPermission(true);
         }
       } catch (err) {
         console.error("Camera error:", err);
@@ -1145,7 +1165,7 @@ function QRScannerScreen({ onScan, onClose }) {
       }
     };
 
-    startCamera();
+    initScanner();
 
     return () => {
       active = false;
@@ -1155,13 +1175,45 @@ function QRScannerScreen({ onScan, onClose }) {
     };
   }, []);
 
+  // Native barcode scan handler
+  const handleNativeScan = async () => {
+    setScanning(true);
+    try {
+      const result = await BarcodeScanner.scan();
+      if (result) {
+        // Check if it's a valid Ethereum address
+        let address = result;
+        
+        // Handle ethereum: URI format
+        if (result.startsWith("ethereum:")) {
+          address = result.replace("ethereum:", "").split("@")[0].split("?")[0];
+        }
+        
+        if (ethers.isAddress(address)) {
+          showToast("QR Code scanned successfully!", "success");
+          if (onScan) {
+            onScan(address);
+          }
+        } else {
+          showToast("Invalid address in QR code", "error");
+        }
+      }
+    } catch (err) {
+      console.error("Scan error:", err);
+      showToast("Scan failed. Try manual entry.", "error");
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const handleManualSubmit = () => {
     if (ethers.isAddress(manualAddress)) {
+      showToast("Address validated!", "success");
       if (onScan) {
         onScan(manualAddress);
       }
     } else {
-      alert("Invalid address format");
+      showToast("Invalid address format", "error");
     }
   };
 
