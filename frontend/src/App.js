@@ -413,7 +413,11 @@ function HomeScreen() {
           <div className="px-4 pb-24">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-white">Tokens</h3>
-              <button onClick={() => navigate("/add-token")} className="text-purple-500" data-testid="add-token-btn">
+              <button 
+                onClick={() => navigate("/add-token")} 
+                className="text-purple-500 p-2 hover:bg-gray-800 rounded-full transition-colors" 
+                data-testid="add-token-btn"
+              >
                 <Plus className="w-6 h-6" />
               </button>
             </div>
