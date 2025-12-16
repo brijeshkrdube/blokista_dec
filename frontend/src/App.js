@@ -62,7 +62,8 @@ function CreateWalletScreen() {
   const [showMnemonic, setShowMnemonic] = useState(false);
 
   useEffect(() => {
-    setMnemonic(WalletService.generateMnemonic());
+    const mnemonic = WalletService.generateMnemonic();
+    setMnemonic(mnemonic);
   }, []);
 
   const handleCreate = () => {
