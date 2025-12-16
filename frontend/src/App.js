@@ -533,11 +533,7 @@ function HomeScreen() {
             {/* Custom Tokens */}
             {tokenBalances.map((token) => (
               <div key={token.address} className="token-item" data-testid={`token-${token.symbol}`}>
-                {TOKEN_LOGOS[token.symbol] ? (
-                  <img src={TOKEN_LOGOS[token.symbol]} alt={token.symbol} className="token-logo" />
-                ) : (
-                  <div className="token-icon">{token.symbol[0]}</div>
-                )}
+                <TokenLogo symbol={token.symbol} size={40} />
                 <div className="flex-1">
                   <p className="text-white font-medium">{token.symbol}</p>
                   <p className="text-gray-400 text-sm">{parseFloat(token.balance).toFixed(4)}</p>
